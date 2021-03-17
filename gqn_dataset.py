@@ -49,9 +49,19 @@ class GQNDataset(Dataset):
 
         return images, viewpoints
 
+class GQNDatasetFake(Dataset):
+    def __init__(self):
+        pass
+
+    def __len__(self):
+        return 1000
+
+    def __getitem__(self, idx):
+        return torch.zeros((20, 3, 64, 64)), torch.zeros((20, 7))
+
 def sample_batch(x_data, v_data, D, M=None, seed=None):
     random.seed(seed)
-    
+
     if D == "Room":
         K = 5
     elif D == "Jaco":
@@ -72,5 +82,5 @@ def sample_batch(x_data, v_data, D, M=None, seed=None):
     x, v = x_data[:, context_idx], v_data[:, context_idx]
     # Sample query view
     x_q, v_q = x_data[:, query_idx], v_data[:, query_idx]
-    
+
     return x, v, x_q, v_q

@@ -165,21 +165,21 @@ if __name__ == '__main__':
     torch_dataset_path_train = f'{torch_dataset_path}/train'
     torch_dataset_path_test = f'{torch_dataset_path}/test'
 
-    os.mkdir(torch_dataset_path)
-    os.mkdir(torch_dataset_path_train)
-    os.mkdir(torch_dataset_path_test)
+    # os.mkdir(torch_dataset_path)
+    # os.mkdir(torch_dataset_path_train)
+    # os.mkdir(torch_dataset_path_test)
 
     ## train
     file_names = _get_dataset_files(dataset_info, 'train', '.')
 
     tot = 0
     for file in file_names:
-        engine = tf.python_io.tf_record_iterator(file)
+        engine = tf.data.Iterator(file)
         for i, raw_data in enumerate(engine):
             path = os.path.join(torch_dataset_path_train, f'{tot+i}.pt.gz')
             print(f' [-] converting scene {file}-{i} into {path}')
             p = Process(target=convert_raw_to_numpy, args=(dataset_info, raw_data, path, True))
-            p.start();p.join() 
+            p.start();p.join()
         tot += i
 
     print(f' [-] {tot} scenes in the train dataset')

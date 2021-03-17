@@ -8,7 +8,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.utils import make_grid, save_image
-from gqn_dataset import GQNDataset, Scene, transform_viewpoint, sample_batch
+from gqn_dataset import GQNDataset, Scene, transform_viewpoint, sample_batch, GQNDatasetFake
 from scheduler import AnnealingStepLR
 from model import GQN
 
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = f"cuda:{args.device_ids[0]}" if torch.cuda.is_available() else "cpu"
-    
+
     # Seed
     if args.seed!=None:
         torch.manual_seed(args.seed)
@@ -53,16 +53,19 @@ if __name__ == '__main__':
     log_interval_num = args.log_interval
     save_interval_num = args.save_interval
     log_dir = os.path.join(args.root_log_dir, args.log_dir)
-    os.mkdir(log_dir)
-    os.mkdir(os.path.join(log_dir, 'models'))
-    os.mkdir(os.path.join(log_dir,'runs'))
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
+        os.mkdir(os.path.join(log_dir, 'models'))
+        os.mkdir(os.path.join(log_dir,'runs'))
 
     # TensorBoardX
     writer = SummaryWriter(log_dir=os.path.join(log_dir,'runs'))
 
     # Dataset
-    train_dataset = GQNDataset(root_dir=train_data_dir, target_transform=transform_viewpoint)
-    test_dataset = GQNDataset(root_dir=test_data_dir, target_transform=transform_viewpoint)
+    # train_dataset = GQNDataset(root_dir=train_data_dir, target_transform=transform_viewpoint)
+    # test_dataset = GQNDataset(root_dir=test_data_dir, target_transform=transform_viewpoint)
+    train_dataset = GQNDatasetFake()
+    test_dataset = GQNDatasetFake()
     D = args.dataset
 
     # Pixel standard-deviation
@@ -71,9 +74,9 @@ if __name__ == '__main__':
 
     # Number of scenes over which each weight update is computed
     B = args.batch_size
-    
+
     # Number of generative layers
-    L =args.layers
+    L = args.layers
 
     # Maximum number of training steps
     S_max = args.gradient_steps
@@ -106,10 +109,12 @@ if __name__ == '__main__':
         v_data = v_data.to(device)
         x, v, x_q, v_q = sample_batch(x_data, v_data, D)
         elbo = model(x, v, v_q, x_q, sigma)
-        
+
         # Logs
         writer.add_scalar('train_loss', -elbo.mean(), t)
-             
+
+        print(-elbo.mean())
+
         with torch.no_grad():
             # Write logs to TensorBoard
             if t % log_interval_num == 0:
@@ -118,7 +123,7 @@ if __name__ == '__main__':
 
                 x_test, v_test, x_q_test, v_q_test = sample_batch(x_data_test, v_data_test, D, M=3, seed=0)
                 elbo_test = model(x_test, v_test, v_q_test, x_q_test, sigma)
-                
+
                 if len(args.device_ids)>1:
                     kl_test = model.module.kl_divergence(x_test, v_test, v_q_test, x_q_test)
                     x_q_rec_test = model.module.reconstruct(x_test, v_test, v_q_test, x_q_test)
@@ -149,6 +154,6 @@ if __name__ == '__main__':
 
         # Pixel-variance annealing
         sigma = max(sigma_f + (sigma_i - sigma_f)*(1 - t/(2e5)), sigma_f)
-        
-    torch.save(model.state_dict(), log_dir + "/models/model-final.pt")  
+
+    torch.save(model.state_dict(), log_dir + "/models/model-final.pt")
     writer.close()
