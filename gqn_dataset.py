@@ -4,6 +4,7 @@ import torch
 from torchvision.transforms import ToTensor, Resize
 from torch.utils.data import Dataset
 import random
+import numpy as np
 
 Context = collections.namedtuple('Context', ['frames', 'cameras'])
 Scene = collections.namedtuple('Scene', ['frames', 'cameras'])
@@ -58,6 +59,20 @@ class GQNDatasetFake(Dataset):
 
     def __getitem__(self, idx):
         return torch.zeros((20, 3, 64, 64)), torch.zeros((20, 7))
+
+class GQNDatasetTest(Dataset):
+    def __init__(self):
+        self.x = np.load("x.npy").astype(np.float32)
+        self.v = np.load("v.npy")
+        self.v = np.tile(self.v, (1, 7)).astype(np.float32)
+        self.v = (self.v + 180) / 360
+        self.x = (self.x / 255)
+
+    def __len__(self):
+        return 1
+
+    def __getitem__(self, idx):
+        return self.x, self.v
 
 def sample_batch(x_data, v_data, D, M=None, seed=None):
     random.seed(seed)

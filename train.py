@@ -8,7 +8,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.utils import make_grid, save_image
-from gqn_dataset import GQNDataset, Scene, transform_viewpoint, sample_batch, GQNDatasetFake
+from gqn_dataset import GQNDataset, Scene, transform_viewpoint, sample_batch, GQNDatasetFake, GQNDatasetTest
 from scheduler import AnnealingStepLR
 from model import GQN
 
@@ -64,8 +64,8 @@ if __name__ == '__main__':
     # Dataset
     # train_dataset = GQNDataset(root_dir=train_data_dir, target_transform=transform_viewpoint)
     # test_dataset = GQNDataset(root_dir=test_data_dir, target_transform=transform_viewpoint)
-    train_dataset = GQNDatasetFake()
-    test_dataset = GQNDatasetFake()
+    train_dataset = GQNDatasetTest()
+    test_dataset = GQNDatasetTest()
     D = args.dataset
 
     # Pixel standard-deviation
@@ -113,15 +113,13 @@ if __name__ == '__main__':
         # Logs
         writer.add_scalar('train_loss', -elbo.mean(), t)
 
-        print(-elbo.mean())
-
         with torch.no_grad():
             # Write logs to TensorBoard
             if t % log_interval_num == 0:
                 x_data_test = x_data_test.to(device)
                 v_data_test = v_data_test.to(device)
 
-                x_test, v_test, x_q_test, v_q_test = sample_batch(x_data_test, v_data_test, D, M=3, seed=0)
+                x_test, v_test, x_q_test, v_q_test = sample_batch(x_data_test, v_data_test, D, M=3)
                 elbo_test = model(x_test, v_test, v_q_test, x_q_test, sigma)
 
                 if len(args.device_ids)>1:
